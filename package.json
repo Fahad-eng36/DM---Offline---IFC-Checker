@@ -1,0 +1,45 @@
+{
+  "name": "dm-qaqc-checker",
+  "productName": "DM QAQC Checker",
+  "version": "0.1.0",
+  "description": "Runs the Dubai Municipality BIM QA/QC checks on IFC exports and shows the results.",
+  "author": "DM BIM tools",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis portable"
+  },
+  "build": {
+    "appId": "ae.dmbim.qaqcchecker",
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "DM-QAQC-Checker-${version}-setup.exe",
+      "shortcutName": "DM QAQC Checker"
+    },
+    "directories": {
+      "output": "release"
+    },
+    "portable": {
+      "artifactName": "DM-QAQC-Checker-${version}-portable.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  }
+}
