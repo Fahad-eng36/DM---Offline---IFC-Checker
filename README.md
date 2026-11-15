@@ -2,7 +2,7 @@
 
 A Windows desktop app that runs the Dubai Municipality BIM QA/QC checks on a folder of IFC exports and shows the results in one place. Everything runs on your own computer; no file is uploaded.
 
-The app does not replace the DM tools. It runs the official **DM QA/QC checker** and **DM building card generator** that you have installed, and presents what they report. Those tools remain the authority.
+The app does not replace the DM tools. It carries the official **DM QA/QC checker** and **DM building card generator** inside it, runs them as they are, and presents what they report. Those tools remain the authority.
 
 ## What it does
 
@@ -17,16 +17,18 @@ A check stops as soon as the DM checker has written its results file. The DM too
 ## What you need
 
 - Windows 10 or 11.
-- The two Dubai Municipality tools, unpacked anywhere on the computer:
-  - `dmbim.qaqcchecker` (contains `BIMToolkit.QAQCChecker.App.exe`)
-  - `dmbim.buildingcardgenerator` (contains `BIMToolkit.BuildingCardGenerator.App.exe`)
 - IFC4 exports. The DM checker no longer accepts IFC2x3.
 
-The app looks for the tools in the usual places. If it does not find them, set their location under **Settings**.
+Nothing else: both DM tools are built into the app. To use a newer DM release instead, choose its `.exe` under **Settings**; **Use built-in copy** switches back.
 
 ## Run from source
 
-Needs [Node.js](https://nodejs.org) 20 or newer.
+Needs [Node.js](https://nodejs.org) 20 or newer, and the two DM tools unpacked into `tools/` (not kept in git; together about 230 MB):
+
+```
+tools/dmbim.qaqcchecker/BIMToolkit.QAQCChecker.App.exe
+tools/dmbim.buildingcardgenerator/BIMToolkit.BuildingCardGenerator.App.exe
+```
 
 ```bash
 npm install
@@ -39,14 +41,15 @@ npm start
 npm run dist
 ```
 
-This writes an installer (`DM-QAQC-Checker-<version>-setup.exe`) and a portable `.exe` to `release/`. They are not code-signed, so Windows SmartScreen warns the first time they are run.
+This writes an installer (`DM-QAQC-Checker-<version>-setup.exe`) and a portable `.exe` to `release/`, both with the DM tools inside. The portable `.exe` unpacks everything on each start, so it opens more slowly than the installed app. They are not code-signed, so Windows SmartScreen warns the first time they are run.
 
 ## How it is put together
 
 | File | Role |
 |---|---|
-| `main.js` | Runs the DM tools, reads `QaQcResults.csv` and the building card, looks up element names and Revit IDs in the IFC files, keeps the history. |
+| `main.js` | Runs the built-in DM tools, reads `QaQcResults.csv` and the building card, looks up element names and Revit IDs in the IFC files, keeps the history. |
 | `preload.js` | The fixed list of requests the window may make. |
 | `app/` | The window: `index.html`, `app.css`, `app.js`. |
+| `tools/` | The two DM tools, copied into the app's resources when it is built. |
 
 Checks are stored in `%APPDATA%\DM QAQC Checker\history`.

@@ -36,7 +36,16 @@
     },
     "portable": {
       "artifactName": "DM-QAQC-Checker-${version}-portable.exe"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "tools",
+        "to": "tools",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
   },
   "devDependencies": {
     "electron": "^33.4.11",

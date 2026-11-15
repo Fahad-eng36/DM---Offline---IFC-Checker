@@ -16,22 +16,20 @@ const historyDir = () => { const d = userFile('history'); fs.mkdirSync(d, { recu
 const readJson = (f, fallback) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return fallback; } };
 
 // ---- settings -------------------------------------------------------------
-function findTool(exe) {
-  // Look where the DM zips are usually unpacked: next to the app, the user's folders and drive roots.
-  const roots = [path.dirname(app.getPath('exe')), process.cwd(), app.getPath('documents'), app.getPath('downloads'), app.getPath('desktop'), 'C:\\', 'D:\\', 'D:\\DM BIM'];
+// Both DM tools ship inside the app (tools/ in the source, resources/tools once installed).
+// Settings can still point at another copy, for example a newer DM release.
+function builtInTool(exe) {
   const sub = exe === QAQC_EXE ? 'dmbim.qaqcchecker' : 'dmbim.buildingcardgenerator';
-  for (const r of roots) {
-    for (const rel of [[sub], [sub, sub], ['dmbim.buildingcardgenerator', sub], ['DM BIM', sub], ['DM BIM', 'dmbim.buildingcardgenerator', sub]]) {
-      const p = path.join(r, ...rel, exe);
-      if (fs.existsSync(p)) return p;
-    }
-  }
-  return '';
+  const p = path.join(app.isPackaged ? process.resourcesPath : __dirname, 'tools', sub, exe);
+  return fs.existsSync(p) ? p : '';
 }
 function settings() {
   const s = readJson(userFile('settings.json'), {});
-  if (!s.qaqcPath || !fs.existsSync(s.qaqcPath)) s.qaqcPath = findTool(QAQC_EXE);
-  if (!s.cardPath || !fs.existsSync(s.cardPath)) s.cardPath = findTool(CARD_EXE);
+  for (const [key, exe] of [['qaqcPath', QAQC_EXE], ['cardPath', CARD_EXE]]) {
+    const own = s[key] && fs.existsSync(s[key]) ? s[key] : '';
+    s[key] = own || builtInTool(exe);
+    s[key + 'BuiltIn'] = !own && !!s[key];
+  }
   return s;
 }
 function saveSettings(patch) {
@@ -109,7 +107,7 @@ async function runCheck(opts) {
   const s = settings(), folder = opts.folder, started = Date.now();
   const files = listIfc(folder);
   if (!files.length) throw new Error('There are no .ifc files in ' + folder + '.');
-  if (!s.qaqcPath) throw new Error('The DM QA/QC checker was not found. Set its location in Settings.');
+  if (!s.qaqcPath) throw new Error('The DM QA/QC checker built into this app is missing. Reinstall the app, or choose a copy in Settings.');
   const run = { id: new Date(started).toISOString().replace(/[:.]/g, '-'), when: started, folder, files, includeWarnings: !!opts.includeWarnings, issues: [], resultsFile: '', card: null, notes: [] };
 
   // The DM tool writes QaQcResults.csv and then spends many more minutes, and several GB of memory, on
@@ -153,7 +151,7 @@ async function runCheck(opts) {
     const zip = newestSince(path.join(folder, 'Temp'), /^Card_.*\.zip$/i, t - 2000, 0);
     if (zip) { try { run.card = readCard(zip); } catch (e) { run.notes.push('The building card could not be read: ' + e.message); } }
     else run.notes.push(explain(c.out) || 'The building card generator did not produce a card.');
-  } else if (opts.runCard) run.notes.push('Storey areas were skipped: the DM building card generator was not found. Set its location in Settings.');
+  } else if (opts.runCard) run.notes.push('Storey areas were skipped: the DM building card generator built into this app is missing.');
 
   run.seconds = Math.round((Date.now() - started) / 1000);
   fs.writeFileSync(path.join(historyDir(), run.id + '.json'), JSON.stringify(run));
@@ -295,7 +293,8 @@ function createWindow() {
 
 ipcMain.handle('settings:get', () => settings());
 ipcMain.handle('rules:get', () => { try { return rules(); } catch (e) { return null; } });
-ipcMain.handle('settings:set', (e, patch) => saveSettings({ qaqcPath: String(patch.qaqcPath || ''), cardPath: String(patch.cardPath || '') }));
+// An empty path means "use the copy built into the app".
+ipcMain.handle('settings:set', (e, patch) => { const p = {}; for (const k of ['qaqcPath', 'cardPath']) if (patch && k in patch) p[k] = String(patch[k] || ''); return saveSettings(p); });
 ipcMain.handle('pick:folder', async () => { const r = await dialog.showOpenDialog(win, { title: 'Folder with the IFC files', properties: ['openDirectory'] }); return r.canceled ? null : r.filePaths[0]; });
 ipcMain.handle('pick:exe', async (e, title) => { const r = await dialog.showOpenDialog(win, { title: String(title || 'Choose the program'), properties: ['openFile'], filters: [{ name: 'Program', extensions: ['exe'] }] }); return r.canceled ? null : r.filePaths[0]; });
 ipcMain.handle('folder:inspect', (e, folder) => { try { return { ok: fs.statSync(folder).isDirectory(), files: listIfc(folder), hasResults: !!newestSince(folder, /^QaQcResults.*\.csv$/i, 0, 1) }; } catch (err) { return { ok: false, files: [] }; } });

@@ -62,7 +62,7 @@
   function mb(b) { return (b / 1048576).toFixed(b > 10485760 ? 0 : 1) + ' MB'; }
   function viewNew() {
     var s = state.settings || {}, h = head('New check', 'Run the Dubai Municipality QA/QC checker on a folder of IFC exports.');
-    if (!s.qaqcPath) h += '<p class="notice bad">The DM QA/QC checker was not found on this computer. <button type="button" class="linkbtn" data-view="settings">Set its location in Settings</button> before running a check.</p>';
+    if (!s.qaqcPath) h += '<p class="notice bad">The DM QA/QC checker built into this app is missing. Reinstall the app, or choose a copy in <button type="button" class="linkbtn" data-view="settings">Settings</button>.</p>';
     if (state.running) {
       var p = state.progress || { text: 'Starting…', done: 0, total: 0 }, secs = Math.round((Date.now() - state.started) / 1000);
       h += '<section class="card pad"><h2>Checking ' + esc(baseName(state.folder)) + '</h2><div>' + esc(p.text) + '</div>' +
@@ -87,7 +87,7 @@
     }
     h += '</section><section class="card pad"><h2>2. Options</h2>' +
       '<label class="check"><input type="checkbox" id="opt-warn"' + (state.includeWarnings ? ' checked' : '') + '><span>Include warnings<small>Off reports only Critical and Error issues, as the DM tool offers.</small></span></label>' +
-      '<label class="check"><input type="checkbox" id="opt-card"' + (state.runCard ? ' checked' : '') + (s.cardPath ? '' : ' disabled') + '><span>Also compute storey areas<small>' + (s.cardPath ? 'Runs the DM building card generator to compare computed BUA, GFA, GA and net area with the declared figures.' : 'The DM building card generator was not found; set its location in Settings.') + '</small></span></label>' +
+      '<label class="check"><input type="checkbox" id="opt-card"' + (state.runCard ? ' checked' : '') + (s.cardPath ? '' : ' disabled') + '><span>Also compute storey areas<small>' + (s.cardPath ? 'Runs the DM building card generator to compare computed BUA, GFA, GA and net area with the declared figures.' : 'The DM building card generator built into this app is missing; reinstall the app or choose a copy in Settings.') + '</small></span></label>' +
       '<label class="check"><input type="checkbox" id="opt-grid"' + (state.writeGrid ? ' checked' : '') + '><span>Also let the DM tool write ModelInfoGrid.xlsx<small>Off by default. The DM tool builds this file after its results and it can add many minutes and several GB of memory on large models. This app does not use it.</small></span></label>' +
       '<div class="row"><button type="button" class="btn primary" id="run"' + (state.files.length && s.qaqcPath ? '' : ' disabled') + '>Run check</button>' +
       (state.hasResults ? '<button type="button" class="btn" id="import">Open the results already in this folder</button>' : '') + '</div>' +
@@ -273,7 +273,7 @@
   }
   function viewRequirements() {
     var R = state.rules, r = state.req;
-    if (!R) return head('Requirements', 'What each element needs, by phase.') + '<section class="card"><p class="empty">The rule file could not be read. Set the location of the DM QA/QC checker in <button type="button" class="linkbtn" data-view="settings">Settings</button>.</p></section>';
+    if (!R) return head('Requirements', 'What each element needs, by phase.') + '<section class="card"><p class="empty">The rule file could not be read. Check the DM QA/QC checker in <button type="button" class="linkbtn" data-view="settings">Settings</button>.</p></section>';
     if (r.ver < 0 || !R.versions[r.ver]) r.ver = R.versions.length - 1;
     var P = R.phases, phHeads = P.map(function (p) { return '<th>' + esc(p) + '</th>'; }).join('');
     var phCells = function (a) { return P.map(function (p, i) { return '<td>' + (isReq(a, i) ? '<span class="pill req">Required</span>' : '<span class="muted">Optional</span>') + '</td>'; }).join(''); };
@@ -324,12 +324,15 @@
   function viewSettings() {
     var s = state.settings || {};
     var tool = function (key, label, exe, help) {
-      return '<div class="field grow"><label for="set-' + key + '">' + label + '</label><div class="row"><input id="set-' + key + '" type="text" style="flex:1 1 320px" value="' + esc(s[key] || '') + '" placeholder="Not found on this computer" readonly><button type="button" class="btn" data-browse="' + key + '" data-title="Choose ' + exe + '">Browse</button></div><div class="muted">' + (s[key] ? '<span class="pill ok">Found</span> ' : '<span class="pill warn">Not found</span> ') + help + '</div></div>';
+      var pill = s[key + 'BuiltIn'] ? '<span class="pill ok">Built in</span> ' : s[key] ? '<span class="pill ok">Your copy</span> ' : '<span class="pill warn">Missing</span> ';
+      var reset = s[key] && !s[key + 'BuiltIn'] ? '<button type="button" class="btn" data-builtin="' + key + '">Use built-in copy</button>' : '';
+      return '<div class="field grow"><label for="set-' + key + '">' + label + '</label><div class="row"><input id="set-' + key + '" type="text" style="flex:1 1 320px" value="' + esc(s[key] || '') + '" placeholder="Not found" readonly><button type="button" class="btn" data-browse="' + key + '" data-title="Choose ' + exe + '">Use another copy</button>' + reset + '</div><div class="muted">' + pill + help + '</div></div>';
     };
-    return head('Settings', 'Where the Dubai Municipality tools are on this computer.') +
+    return head('Settings', 'The Dubai Municipality tools this app runs.') +
       '<section class="card pad"><h2>DM tools</h2>' +
-      tool('qaqcPath', 'DM QA/QC checker', 'BIMToolkit.QAQCChecker.App.exe', 'The file <span class="mono">BIMToolkit.QAQCChecker.App.exe</span> inside the unpacked <span class="mono">dmbim.qaqcchecker</span> folder. Needed to run a check and to show Requirements.') +
-      tool('cardPath', 'DM building card generator', 'BIMToolkit.BuildingCardGenerator.App.exe', 'The file <span class="mono">BIMToolkit.BuildingCardGenerator.App.exe</span> inside <span class="mono">dmbim.buildingcardgenerator</span>. Needed for storey areas.') +
+      '<p class="muted">Both tools come built into this app; nothing else needs to be installed. Choose another copy only to use a newer release from Dubai Municipality.</p>' +
+      tool('qaqcPath', 'DM QA/QC checker', 'BIMToolkit.QAQCChecker.App.exe', 'Runs the check and supplies the rules shown under Requirements.') +
+      tool('cardPath', 'DM building card generator', 'BIMToolkit.BuildingCardGenerator.App.exe', 'Computes storey areas.') +
       '<p class="muted" style="margin:0">Both tools are published by Dubai Municipality. This app runs them as they are and only presents what they report.</p></section>';
   }
 
@@ -362,7 +365,14 @@
     if (d['delete']) { state.confirmDelete = d['delete']; return render(); }
     if (d.deleteNo) { state.confirmDelete = null; return render(); }
     if (d.deleteYes) return dm.historyDelete(d.deleteYes).then(function () { if (state.run && state.run.id === d.deleteYes) state.run = null; go('history'); });
-    if (d.browse) return dm.pickExe(d.title).then(function (p) { if (!p) return; var patch = { qaqcPath: state.settings.qaqcPath, cardPath: state.settings.cardPath }; patch[d.browse] = p; return dm.setSettings(patch).then(function (s) { state.settings = s; return loadRules(); }).then(render); });
+    if (d.browse || d.builtin) {
+      var key = d.browse || d.builtin;
+      return (d.browse ? dm.pickExe(d.title) : Promise.resolve('')).then(function (p) {
+        if (d.browse && !p) return;
+        var patch = {}; patch[key] = p;
+        return dm.setSettings(patch).then(function (s) { state.settings = s; return loadRules(); }).then(render);
+      });
+    }
   });
   function flash(btn, msg) { var old = btn.textContent; btn.textContent = msg; setTimeout(function () { btn.textContent = old; }, 1600); }
   document.addEventListener('change', function (e) {
